@@ -17,28 +17,29 @@ a slow response and test your caching."""
 
 import redis
 import requests
+from typing import Callable
 from functools import wraps
 
 r = redis.Redis()
 
 
-def url_access_count(method):
+def url_access_count(method: Callable) -> Callable:
     """decorator for get_page function"""
     @wraps(method)
-    def wrapper(url):
+    def wrapper(url: str) -> str:
         """wrapper function"""
         key = "cached:" + url
+        key_count = "count:" + url
+        # Check if the URL is cached
         cached_value = r.get(key)
         if cached_value:
             return cached_value.decode("utf-8")
 
-            # Get new content and update cache
-        key_count = "count:" + url
+        # Get new content and update cache
         html_content = method(url)
 
         r.incr(key_count)
-        r.set(key, html_content, ex=10)
-        r.expire(key, 10)
+        r.setex(key, 10, html_content)
         return html_content
     return wrapper
 
@@ -46,9 +47,18 @@ def url_access_count(method):
 @url_access_count
 def get_page(url: str) -> str:
     """obtain the HTML content of a particular"""
-    results = requests.get(url)
-    return results.text
-
+    try:
+        results = requests.get(url)
+        return results.text
+    except requests.RequestException as e:
+        print(f"Error fetching {url}: {e}")
+        return ""
 
 if __name__ == "__main__":
-    get_page('http://slowwly.robertomurray.co.uk')
+    url = 'http://www.google.com'
+    print(get_page(url))
+    print(get_page(url))
+
+    # Check the access count
+    key_count = "count:" + url
+    print(r.get(key_count).decode("utf-8"))

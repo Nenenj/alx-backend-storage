@@ -4,6 +4,7 @@ Main file to test the Cache class
 """
 
 Cache = __import__('exercise').Cache
+replay = __import__('exercise').replay
 
 def main():
     cache = Cache()
@@ -33,7 +34,7 @@ def main():
 
     # Test call history
     print("Replay store call history:")
-    cache.replay(cache.store)
+    replay(cache.store)
 
 if __name__ == "__main__":
     main()
