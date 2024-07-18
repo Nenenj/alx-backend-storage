@@ -33,12 +33,15 @@ def url_access_count(method: Callable) -> Callable:
         # Check if the URL is cached
         cached_value = r.get(key)
         if cached_value:
+            r.incr(key_count)
             return cached_value.decode("utf-8")
 
         # Get new content and update cache
         html_content = method(url)
 
+        # Increment the access count
         r.incr(key_count)
+        # Cache with an expires of 10 seconds
         r.setex(key, 10, html_content)
         return html_content
     return wrapper
@@ -49,6 +52,7 @@ def get_page(url: str) -> str:
     """obtain the HTML content of a particular"""
     try:
         results = requests.get(url)
+        results.raise_for_status()
         return results.text
     except requests.RequestException as e:
         print(f"Error fetching {url}: {e}")
@@ -61,4 +65,8 @@ if __name__ == "__main__":
 
     # Check the access count
     key_count = "count:" + url
-    print(r.get(key_count).decode("utf-8"))
+    count_value = r.get(key_count)
+    if count_value:
+        print(r.get(key_count).decode("utf-8"))
+    else:
+        print("No access count found")
